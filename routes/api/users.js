@@ -5,6 +5,10 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const passport = require("passport");
 const keys = require("../../config/keys");
+//Cargar validacion inputs
+const validateRegisterInput = require("../../validation/register");
+const validateLoginInput = require("../../validation/login");
+
 const User = require("../../models/User");
 
 // @route   GET api/users/test
@@ -18,9 +22,17 @@ router.get("/test", (req, res) => {
 // @desc    registrar el usuario en la base de datos
 // @acces   Public
 router.post("/register", (req, res) => {
+  const { errors, isValid } = validateRegisterInput(req.body);
+
+  //comporbar la validacion del formulario del registro
+  if (!isValid) {
+    return res.status(400).json(errors);
+  }
+
   User.findOne({ email: req.body.email }).then(user => {
     if (user) {
-      return res.status(400).json({ email: "Email ya existe" });
+      errors.email = "Email ya existe";
+      return res.status(400).json(errors);
     } else {
       const avatar = gravatar.url(req.body.email, {
         s: "200", //tamaño
@@ -53,13 +65,21 @@ router.post("/register", (req, res) => {
 // @acces   Public
 
 router.post("/login", (req, res) => {
+  const { errors, isValid } = validateLoginInput(req.body);
+
+  //comporbar la validacion del formulario del registro
+  if (!isValid) {
+    return res.status(400).json(errors);
+  }
+
   const email = req.body.email;
   const password = req.body.password;
 
   //ecnontrar usuario por email
   User.findOne({ email }).then(user => {
     if (!user) {
-      return res.status(404).json({ email: "Usuario no existe" });
+      errors.email = "Usuario no existe";
+      return res.status(404).json(errors);
     }
     //comprobar contraseña
     bcrypt.compare(password, user.password).then(isMatch => {
@@ -84,7 +104,8 @@ router.post("/login", (req, res) => {
           }
         );
       } else {
-        res.status(400).json({ password: "Contraseña incorrecta" });
+        errors.password = "Contraseña incorrecta";
+        res.status(400).json(errors);
       }
     });
   });
