@@ -3,6 +3,8 @@ const router = express.Router();
 const mongoose = require("mongoose");
 const passport = require("passport");
 
+//cargar validaciones
+const validateProfileInput = require("../../validation/profile");
 //cargar modelos
 const Profile = require("../../models/Profile");
 const User = require("../../models/User");
@@ -24,6 +26,7 @@ router.get(
   (req, res) => {
     const errors = {};
     Profile.findOne({ user: req.user.id })
+      .populate("user", ["name", "avatar"])
       .then(profile => {
         if (!profile) {
           errors.noprofile = "No hay perfil para este usuario";
@@ -39,11 +42,16 @@ router.get(
 // @desc    Crear o editar el prefil de usuario
 // @acces   Private
 
-router.get(
+router.post(
   "/",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    const errors = {};
+    const { errors, isValid } = validateProfileInput(req.body);
+    //comprobar validacion
+    if (!isValid) {
+      //retornar errores
+      return res.status(400).json(errors);
+    }
     // Conseguir campos
     const profileFields = {};
     profileFields.user = req.user.id;
@@ -63,11 +71,11 @@ router.get(
 
     //social
     profileFields.social = {};
-    if (req.body.youtube) profileField.social.youtube = req.body.youtube;
-    if (req.body.twitter) profileField.social.twitter = req.body.twitter;
-    if (req.body.facebook) profileField.social.facebook = req.body.facebook;
-    if (req.body.linkedin) profileField.social.linkedin = req.body.linkedin;
-    if (req.body.instagram) profileField.social.instagram = req.body.instagram;
+    if (req.body.youtube) profileFields.social.youtube = req.body.youtube;
+    if (req.body.twitter) profileFields.social.twitter = req.body.twitter;
+    if (req.body.facebook) profileFields.social.facebook = req.body.facebook;
+    if (req.body.linkedin) profileFields.social.linkedin = req.body.linkedin;
+    if (req.body.instagram) profileFields.social.instagram = req.body.instagram;
 
     Profile.findOne({ user: req.user.id }).then(profile => {
       if (profile) {
